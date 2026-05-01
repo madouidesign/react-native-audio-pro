@@ -152,27 +152,23 @@ class AudioPro: RCTEventEmitter {
 			log("wasPlayingBeforeInterruption at end:", wasPlayingBeforeInterruption)
 			log("shouldResume:", options.contains(.shouldResume))
 
-			// If playback should resume and we have permission to do so
+			// Always reactivate the audio session when interruption ends — even if audio
+			// was paused. Without this, a paused session stays dead after interruption and
+			// iOS removes background-audio protection, killing the app after ~30-60 min.
+			do {
+				try AVAudioSession.sharedInstance().setActive(true, options: .notifyOthersOnDeactivation)
+				log("Audio session reactivated after interruption")
+			} catch {
+				log("Failed to reactivate audio session: \(error.localizedDescription)")
+			}
+
+			// Resume playback only if audio was playing before the interruption
 			if wasPlayingBeforeInterruption && options.contains(.shouldResume) {
 				log("Interruption ended with resume option, resuming playback")
-
-				// Try to reactivate the audio session
-				do {
-					try AVAudioSession.sharedInstance().setActive(true, options: .notifyOthersOnDeactivation)
-
-					// Resume playback
-					player?.play()
-					startProgressTimer()
-
-					// Emit PLAYING state
-					sendPlayingStateEvent()
-
-					// Update now playing info
-					updateNowPlayingInfo(time: player?.currentTime().seconds ?? 0, rate: 1.0)
-				} catch {
-					log("Failed to reactivate audio session: \(error.localizedDescription)")
-					emitPlaybackError("Failed to resume after interruption: \(error.localizedDescription)")
-				}
+				player?.play()
+				startProgressTimer()
+				sendPlayingStateEvent()
+				updateNowPlayingInfo(time: player?.currentTime().seconds ?? 0, rate: 1.0)
 			}
 
 			// Reset the flag
