@@ -312,10 +312,12 @@ open class AudioProPlaybackService : MediaLibraryService() {
 			return
 		}
 
+		// Keep foreground as long as a track is loaded (buffering OR ready — playing OR paused).
+		// Demoting to background on pause allows the system to kill the service on low-RAM
+		// devices (e.g. 2 GB Android Go phones), breaking long-background audio sessions.
 		val shouldBeForeground =
-			currentPlayer.playWhenReady &&
-				(currentPlayer.playbackState == Player.STATE_BUFFERING ||
-					currentPlayer.playbackState == Player.STATE_READY)
+			currentPlayer.playbackState == Player.STATE_BUFFERING ||
+				currentPlayer.playbackState == Player.STATE_READY
 
 		if (shouldBeForeground) {
 			if (!isForegroundRunning) {
