@@ -512,10 +512,12 @@ class AudioPro: RCTEventEmitter {
 					}
 				}
 			} catch {
-				DispatchQueue.main.async {
-					self.onError(error.localizedDescription)
-					self.cleanup()
-				}
+				// basmala fork (bug-091) — artwork is COSMETIC: a fetch failure
+				// (typical case: device offline while the audio itself plays from
+				// a local cached file://) must NEVER kill playback. The previous
+				// onError + cleanup() tore down a perfectly healthy audio session,
+				// making every offline cached play die instantly. Log and skip.
+				NSLog("[AudioPro] artwork fetch failed (non-fatal): %@", error.localizedDescription)
 			}
 		}
 	}
